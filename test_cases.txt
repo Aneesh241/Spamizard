@@ -1,0 +1,217 @@
+Smart Email Classifier — Test Cases
+
+Legend:
+- Expected Label: "Not Spam" (ham) or "Spam" (includes phishing)
+- Notes mention why a sample should be flagged or not
+
+========================================
+1) Legitimate (Ham) emails
+========================================
+
+TC-HAM-01
+Input:
+Subject: Team meeting tomorrow
+Hi all, just a reminder that our sprint planning is tomorrow at 10:00 AM in Room 3B. Please bring your updates and blockers.
+Expected: Not Spam
+Notes: Neutral corporate language; no suspicious links or urgency.
+
+TC-HAM-02
+Input:
+Subject: Re: Lunch?
+Hey! Want to grab lunch at 1 pm? There’s a new place near the office.
+Expected: Not Spam
+Notes: Casual conversation; no marketing patterns.
+
+TC-HAM-03
+Input:
+Subject: Invoice paid
+Hello, your invoice INV-20495 has been paid. No action required.
+Expected: Not Spam
+Notes: Transactional confirmation without links/urgency.
+
+TC-HAM-04
+Input:
+Subject: University application update
+We received your application. We will contact you with next steps within 2 weeks.
+Expected: Not Spam
+Notes: Informational message.
+
+TC-HAM-05
+Input:
+Subject: Calendar invite
+I’ve shared a calendar invite for Friday’s demo. Let me know if the time works.
+Expected: Not Spam
+Notes: Standard work email.
+
+========================================
+2) Advertising Spam (classic spam)
+========================================
+
+TC-SPAM-01
+Input:
+WINNER!! You have been selected for a FREE iPhone. Claim now at http://promo-gifts-now.example/claim
+Expected: Spam
+Notes: Caps, FREE offer, claim-now CTA.
+
+TC-SPAM-02
+Input:
+Get 70% OFF on weight loss pills!!! Limited time only. Click here: www.slim-fast-example.com
+Expected: Spam
+Notes: Excessive promotions, exclamation, marketing pattern.
+
+TC-SPAM-03
+Input:
+Congratulations! You’ve won a $1,000 gift card. Confirm delivery today!
+Expected: Spam
+Notes: Prize lure, urgency.
+
+TC-SPAM-04
+Input:
+Adult content unlocked. View now >> http://xxx-example.biz
+Expected: Spam
+Notes: Adult content + link.
+
+TC-SPAM-05
+Input:
+Exclusive ringtones available. Text MIX to 85069 to subscribe.
+Expected: Spam
+Notes: SMS spam style subscription.
+
+========================================
+3) Phishing (mapped to Spam)
+========================================
+
+TC-PHISH-01
+Input:
+Subject: Reset your password
+Your account has detected unusual activity. Reset your password immediately: http://security.example-account.com/login
+Expected: Spam
+Notes: Phishing password-reset lure; suspicious domain.
+
+TC-PHISH-02
+Input:
+Subject: Bank alert
+We temporarily locked your card. Verify your identity now: https://my-bank.example.verify-secure.co
+Expected: Spam
+Notes: Bank impersonation; off-domain link.
+
+TC-PHISH-03
+Input:
+Subject: Office 365 mailbox quota exceeded
+Your mailbox is almost full. Re-validate to continue receiving emails: http://o365-example-quota.com
+Expected: Spam
+Notes: O365 phishing theme.
+
+TC-PHISH-04
+Input:
+Subject: DocuSign: Please review and sign your document
+You’ve received a secure document. View document: http://docusign-secure-example.com
+Expected: Spam
+Notes: Brand impersonation.
+
+TC-PHISH-05
+Input:
+Subject: GitHub security alert
+We noticed a sign-in from a new device. If this was not you, verify immediately: http://github-security-check.example
+Expected: Spam
+Notes: Security scare with fake link.
+
+========================================
+4) Edge cases & robustness
+========================================
+
+TC-EDGE-01
+Input:
+""
+Expected: UI should show validation message (no prediction)
+Notes: Empty input; app should flash a message.
+
+TC-EDGE-02
+Input:
+<html><body><h1>Invoice</h1><p>Total due: $50.00</p></body></html>
+Expected: Not Spam
+Notes: HTML content; legitimate invoice text.
+
+TC-EDGE-03
+Input:
+Visit hxxp://login.example.com (replace xx with tt) to secure your account.
+Expected: Spam
+Notes: Obfuscated URL common in phishing.
+
+TC-EDGE-04
+Input:
+Click 192.168.0.5/login to confirm your package delivery.
+Expected: Spam
+Notes: IP-based link usage.
+
+TC-EDGE-05
+Input:
+OK
+Expected: Not Spam
+Notes: Very short benign message.
+
+TC-EDGE-06
+Input:
+FREE!!! FREE!!! FREE!!! CLICK NOW!!!
+Expected: Spam
+Notes: Excessive caps and punctuation.
+
+TC-EDGE-07
+Input:
+Hola, ¿puedes revisar el documento adjunto cuando tengas tiempo?
+Expected: Not Spam
+Notes: Non-English benign message.
+
+TC-EDGE-08
+Input:
+<script>alert('xss')</script>
+Expected: Not Spam (and must not execute in UI)
+Notes: XSS payload should be rendered safely; model should treat as text.
+
+TC-EDGE-09
+Input:
+Re: Your order #483920 shipped via UPS. Track here: https://www.ups.com/track?loc=en_US
+Expected: Not Spam
+Notes: Legit tracking link on official domain.
+
+TC-EDGE-10
+Input:
+Important tax refund available. Provide your SSN to claim immediately.
+Expected: Spam
+Notes: Sensitive info request + urgency.
+
+========================================
+5) Borderline / promotional but legitimate
+========================================
+
+TC-BORDER-01
+Input:
+Subject: Product update
+We’re launching a new feature next week. Read the release notes here.
+Expected: Not Spam
+Notes: Informational product update without aggressive CTA.
+
+TC-BORDER-02
+Input:
+Subject: Newsletter — October
+Here’s what’s new this month. You can unsubscribe at any time using the link below.
+Expected: Not Spam
+Notes: Typical opt-in newsletter language.
+
+========================================
+6) Performance / long content
+========================================
+
+TC-PERF-01
+Input:
+A very long email (copy a few pages of benign text, e.g., meeting minutes or documentation) to test response time and memory.
+Expected: Not Spam
+Notes: Should process within reasonable time; no crash.
+
+========================================
+How to use these test cases
+========================================
+- Manual: Start the app (python app.py) and paste the Input text into the textarea. Verify the Expected label.
+- Automated idea (future): Convert this file to a JSON/CSV with fields {id, text, expected} and write a small pytest to POST to / and assert response contains the expected label.
+
+End of test cases.

@@ -11,7 +11,7 @@ import re
 import string
 import nltk
 from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
+from nltk.stem import WordNetLemmatizer, PorterStemmer
 import logging
 import os
 
@@ -28,6 +28,7 @@ try:
     nltk.download('punkt', quiet=True)
     STOPWORDS = set(stopwords.words('english'))
     lemmatizer = WordNetLemmatizer()
+    porter = PorterStemmer()
 except Exception as e:
     logger.warning(f"NLTK resources could not be downloaded: {e}")
     STOPWORDS = set()
@@ -35,26 +36,85 @@ except Exception as e:
         def lemmatize(self, word, pos='v'):
             return word
     lemmatizer = DummyLemmatizer()
-
-def load_data(file_path="spam_dataset.csv"):
-    """Load and prepare the dataset."""
+    # Porter stemmer doesn't require external corpora; still may fail if nltk missing
     try:
+        porter = PorterStemmer()
+    except Exception:
+        porter = None
+
+def load_data(file_path: str | None = None):
+    """Load and prepare the dataset.
+
+    Prefers merged dataset `spam_phishing_dataset.csv` if present, otherwise falls back to
+    `spam_dataset.csv`. Supports schemas with columns [Category, Message] or [text, label].
+    """
+    try:
+        # Auto-select dataset if not provided
+        if file_path is None:
+            if os.path.exists('spam_phishing_dataset.csv'):
+                file_path = 'spam_phishing_dataset.csv'
+            else:
+                file_path = 'spam_dataset.csv'
+
         df = pd.read_csv(file_path, encoding='latin-1')
-        logger.info(f"Loaded dataset with {len(df)} rows")
-        
-        # Keep only necessary columns and rename them
-        df = df[['Category', 'Message']].rename(columns={
-            'Category': 'label',
-            'Message': 'text'
-        })
-        
-        # Normalize labels
-        df['label'] = df['label'].str.lower().str.strip()
-        df['label'] = df['label'].map({'ham': 0, 'spam': 1, 'no': 0, 'yes': 1})
-        df['label'] = df['label'].fillna(0).astype(int)
-        
+        logger.info(f"Loaded dataset '{file_path}' with {len(df)} rows")
+
+        # Standardize columns to [text, label]
+        cols_lower = {c.lower(): c for c in df.columns}
+        if 'text' in cols_lower and 'label' in cols_lower:
+            df = df[[cols_lower['text'], cols_lower['label']]].rename(columns={
+                cols_lower['text']: 'text',
+                cols_lower['label']: 'label'
+            })
+        elif 'category' in cols_lower and 'message' in cols_lower:
+            df = df[[cols_lower['category'], cols_lower['message']]].rename(columns={
+                cols_lower['category']: 'label',
+                cols_lower['message']: 'text'
+            })
+        else:
+            # Try common alternatives
+            candidate_text = None
+            for c in ['Email Text', 'Email_Body', 'Body', 'Message', 'Content']:
+                if c in df.columns:
+                    candidate_text = c
+                    break
+            candidate_label = None
+            for c in ['Label', 'Class', 'Category', 'Type', 'Target']:
+                if c in df.columns:
+                    candidate_label = c
+                    break
+            if candidate_text and candidate_label:
+                df = df[[candidate_text, candidate_label]].rename(columns={
+                    candidate_text: 'text',
+                    candidate_label: 'label'
+                })
+            else:
+                raise ValueError(f"Unsupported dataset schema. Columns: {list(df.columns)[:10]}...")
+
+        # Normalize labels: map phishing→spam (1), ham/legit→0
+        if not pd.api.types.is_numeric_dtype(df['label']):
+            df['label'] = df['label'].astype(str).str.lower().str.strip()
+            mapping = {
+                'ham': 0, 'legitimate': 0, 'legit': 0, 'not spam': 0, 'no': 0, 'safe': 0,
+                'spam': 1, 'phishing': 1, 'phish': 1, 'malicious': 1, 'yes': 1
+            }
+            df['label'] = df['label'].map(lambda x: mapping.get(x, x))
+            # Heuristics
+            df.loc[df['label'].astype(str).str.contains('phish', na=False), 'label'] = 1
+            df.loc[df['label'].astype(str).str.contains('spam', na=False), 'label'] = 1
+            df.loc[df['label'].astype(str).str.contains('ham|legit', na=False), 'label'] = 0
+            # Coerce and drop unknowns
+            df = df[pd.to_numeric(df['label'], errors='coerce').notna()].copy()
+            df['label'] = df['label'].astype(int).clip(0, 1)
+        else:
+            df['label'] = df['label'].astype(int).clip(0, 1)
+
+        # Basic cleaning
+        df['text'] = df['text'].astype(str).str.strip()
+        df = df[df['text'].str.len() > 0]
+
         logger.info(f"Label distribution before balancing: {df['label'].value_counts().to_dict()}")
-        
+
         return df
     except Exception as e:
         logger.error(f"Error loading data: {e}")
@@ -86,8 +146,25 @@ def clean_text(text):
     # Tokenize and remove stopwords
     tokens = [word for word in text.split() if word.isalnum() and word not in STOPWORDS]
     
-    # Lemmatize words
-    tokens = [lemmatizer.lemmatize(word) for word in tokens]
+    # Lemmatize or stem words with robust fallback
+    processed = []
+    for word in tokens:
+        new_word = word
+        try:
+            if hasattr(lemmatizer, 'lemmatize'):
+                new_word = lemmatizer.lemmatize(word)
+            elif 'porter' in globals() and porter is not None:
+                new_word = porter.stem(word)
+        except Exception as ex:
+            # Handle issues like WordNet corpus quirks; keep original token
+            logger.debug(f"Token processing fallback for '{word}': {ex}")
+            try:
+                if 'porter' in globals() and porter is not None:
+                    new_word = porter.stem(word)
+            except Exception:
+                new_word = word
+        processed.append(new_word)
+    tokens = processed
     
     return ' '.join(tokens)
 

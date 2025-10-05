@@ -4,6 +4,8 @@ import google.generativeai as genai
 import os
 import logging
 from dotenv import load_dotenv
+from spam_classifier import clean_text as training_clean_text
+import re
 
 # Configure logging
 logging.basicConfig(
@@ -40,12 +42,35 @@ else:
     model_gemini = None
 
 def clean_text(text):
-    """Clean and normalize input text for spam classification."""
-    if not text:
-        return ""
-    text = str(text).lower()
-    text = ' '.join(word for word in text.split() if word.isalnum())
-    return text
+    """Use the same cleaning as training for consistent inference."""
+    return training_clean_text(text)
+
+# Classification tuning
+SPAM_THRESHOLD = float(os.getenv('SPAM_THRESHOLD', '0.45'))  # classify as spam if P(spam) >= threshold
+RULES_STRICT = os.getenv('RULES_STRICT', 'true').lower() == 'true'
+
+SPAM_CUE_PATTERNS = [
+    r"\bfree\b",
+    r"\bwinner\b|\bwon\b|\bwin\b",
+    r"claim\s+now",
+    r"click\s+here",
+    r"congratulations",
+    r"\bprize\b|\bjackpot\b",
+    r"urgent|immediately|act now",
+    r"http[s]?://",
+    r"\b(?:\w+[-.]){1,}\w+\.(?:biz|info|download)\b",
+    r"\btext\s+[A-Z]{2,}\b",
+    r"\bsubscription\b|\bsusbscribe\b|\bopt\s*out\b",
+]
+
+def detect_spam_cues(raw_text: str):
+    text = (raw_text or "")
+    text_lower = text.lower()
+    matches = []
+    for pat in SPAM_CUE_PATTERNS:
+        if re.search(pat, text_lower):
+            matches.append(pat)
+    return len(matches), matches
 
 def generate_email_response(email_text):
     """Generate a response to an email using the Gemini API."""
@@ -74,10 +99,15 @@ def index():
     confidence_score = None
 
     if request.method == 'POST':
-        email_text = request.form.get('email', '').strip()
+        email_text = request.form.get('email', '')
+        raw_text = (email_text or '').strip()
         
-        if not email_text:
+        # Basic empty/length validation
+        if not raw_text:
             flash("Please enter email content to analyze")
+            return render_template('index.html')
+        if len(raw_text) < 3:
+            flash("Email content is too short to analyze")
             return render_template('index.html')
         
         if not model or not vectorizer:
@@ -85,17 +115,40 @@ def index():
             return render_template('index.html')
             
         try:
+            # Clean and validate meaningful content
+            cleaned = clean_text(raw_text)
+            if not cleaned or len(cleaned.strip()) == 0:
+                flash("Email content contains no meaningful text after cleaning")
+                return render_template('index.html')
+            
             # Classify email
-            cleaned = clean_text(email_text)
             vectorized = vectorizer.transform([cleaned])
-            prediction = model.predict(vectorized)[0]
-            
-            # Get probability scores
+
+            # Probability-based decision with threshold
             proba = model.predict_proba(vectorized)[0]
-            confidence_score = round(proba[prediction] * 100, 2)
-            
-            result = "Spam" if prediction == 1 else "Not Spam"
-            logger.info(f"Classification result: {result} with confidence {confidence_score}%")
+            classes = list(getattr(model, 'classes_', [0, 1]))
+            try:
+                spam_idx = classes.index(1)
+                ham_idx = classes.index(0)
+            except ValueError:
+                # Fallback assumption 0=ham,1=spam
+                spam_idx, ham_idx = 1, 0
+
+            p_spam = float(proba[spam_idx])
+            p_ham = float(proba[ham_idx])
+
+            result = "Spam" if p_spam >= SPAM_THRESHOLD else "Not Spam"
+            confidence_score = round((p_spam if result == "Spam" else p_ham) * 100, 2)
+
+            # Rule-based override for strong cues
+            if RULES_STRICT:
+                cues_count, cues = detect_spam_cues(email_text)
+                if cues_count >= 2 and result == "Not Spam":
+                    logger.info(f"Rule override to Spam due to cues: {cues}")
+                    result = "Spam"
+                    confidence_score = max(confidence_score, round(p_spam * 100, 2), 90.0)
+
+            logger.info(f"Classification result: {result} (P_spam={p_spam:.3f}, threshold={SPAM_THRESHOLD}, confidence={confidence_score}%)")
 
             # Generate response for non-spam emails
             if result == "Not Spam":
