@@ -1,4 +1,4 @@
-﻿# 🧙 Spamizard - Smart Email Classifier with AI - Powered Reply Assistant
+# 🧙 Spamizard - Smart Email Classifier with AI - Powered Reply Assistant
 ![Accuracy](https://img.shields.io/badge/accuracy-93.04%25-10b981)
 ![Model](https://img.shields.io/badge/model-Naive%20Bayes%20%2B%20TF--IDF-4f46e5)
 ![Python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)
@@ -131,8 +131,8 @@ README.md               # Project documentation
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/Aneesh241/spam-classifier.git
-cd spam-classifier
+git clone https://github.com/Aneesh241/spamizard.git
+cd spamizard
 ```
 
 ### 2. Create & activate a virtual environment
@@ -447,8 +447,8 @@ response = requests.post('http://localhost:5000/',
 ### **Setting Up Development Environment**
 ```bash
 # Clone and setup
-git clone https://github.com/Aneesh241/spam-classifier.git
-cd spam-classifier
+git clone https://github.com/Aneesh241/spamizard.git
+cd spamizard
 python -m venv .venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 pip install -r requirements.txt
@@ -496,7 +496,7 @@ Text Cleaning → Lemmatization → Feature Extraction → Classification → Re
 
 ### **File Structure Details**
 ```
-spam-classifier/
+spamizard/
 ├── app.py                 # Flask web application
 ├── spam_classifier.py     # ML training pipeline  
 ├── requirements.txt       # Python dependencies
@@ -513,7 +513,7 @@ spam-classifier/
 
 ---
 
-## � Future Developments
+## 🚀 Future Developments
 
 ### **Planned Enhancements**
 - **🔧 Browser Extension**: Transform Spamizard into a Chrome/Firefox extension for real-time email analysis directly within Gmail, Outlook, and other webmail clients
