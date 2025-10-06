@@ -1,18 +1,35 @@
-﻿# 📧 Smart Email Classifier (Spam Detection + AI Response Generator)
+﻿# 🧙 Spamizard - Smart Email Classifier with AI - Powered Reply Assistant
+![Accuracy](https://img.shields.io/badge/accuracy-93.04%25-10b981)
+![Model](https://img.shields.io/badge/model-Naive%20Bayes%20%2B%20TF--IDF-4f46e5)
+![Python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/flask-2.x-000000?logo=flask)
+![License](https://img.shields.io/badge/license-MIT-0ea5e9)
 
-This project is a **production-ready Spam Email Classifier** with a modern web interface, built using **Machine Learning (scikit-learn)** and **Flask**.  
-It not only detects whether an email is **Spam** or **Not Spam** with high accuracy, but also uses **Google Gemini API** to generate professional email replies for safe emails.
+Spamizard is a **production-ready AI email classifier** with a modern web interface, built using **Machine Learning (scikit-learn)** and **Flask**.  
+It detects whether an email is **Spam** or **Not Spam** (phishing is mapped to spam) with high accuracy, and can use **Google Gemini API** to generate professional replies for safe emails.
+
+---
+
+## ⚠️ Disclaimer
+
+This project was built as a personal/hackathon demo. It is not a production security product and accuracy is not guaranteed. Misclassifications (false positives/negatives) can and will occur.
+
+- Do not rely on this tool for critical security decisions. Always verify suspicious emails through official channels.
+- The software is provided “as is,” without warranty of any kind. The author and contributors are not liable for any loss, damage, or issues arising from its use.
+- If you process real data, ensure compliance with your organization’s privacy/security policies and applicable laws.
 
 ---
 
 ## ✨ Key Features
 - 🔍 **Advanced Spam Detection** using optimized Multinomial Naive Bayes with TF-IDF vectorization
-- 📊 **Real-time Confidence Scoring** with probability-based predictions
-- 🤖 **AI-Powered Email Responses** for legitimate emails via Google Gemini API
-- 🎨 **Modern Responsive Web UI** with dark/light mode and accessibility features
+- 🛡️ **Enhanced Phishing Protection** with obfuscated URL detection and credential harvesting prevention
+- 📊 **Real-time Confidence Scoring** with probability-based predictions and rule-based overrides
+- 🎯 **Smart Classification Logic** that reduces false positives on legitimate business emails
+- 🤖 **AI-Powered Email Responses** for legitimate emails via Google Gemini API (toggleable)
+- 🎨 **Modern Responsive Web UI** with dark/light mode, Charizard branding, and accessibility features
 - 📂 **Automated ML Pipeline** with hyperparameter tuning and model validation
 - ⚡ **High Performance** with optimized text preprocessing and feature extraction
-- � **Production Security** with input validation and error handling
+- 🔒 **Production Security** with input validation and error handlingmail Classifier (Spam + Phishing)
 
 ---
 
@@ -70,6 +87,16 @@ It not only detects whether an email is **Spam** or **Not Spam** with high accur
 - **API Integration**: google-generativeai SDK
 - **Response Quality**: Context-aware prompt engineering
 
+### **Enhanced Spam Detection**
+- **Probability Threshold**: Configurable SPAM_THRESHOLD (default: 0.35) for fine-tuned sensitivity
+- **Rule-Based Overrides**: Advanced pattern matching with RULES_STRICT mode
+- **Phishing Protection**: Detects obfuscated URLs (hxxp://, replace xx with tt patterns)
+- **Credential Harvesting Prevention**: Flags SSN, bank account, and password requests
+- **Context-Aware Analysis**: Reduces false positives on legitimate HTML invoices and business emails
+- **Strong Spam Indicators**: Override system for high-confidence malicious patterns
+- **Domain Reputation**: Suspicious TLD detection (.biz, .info, .tk, .ml)
+- **Social Engineering Detection**: Urgency + verification request combinations
+
 ### **Production & Deployment**
 - **WSGI Server**: Gunicorn for production deployment
 - **Configuration**: Environment-based config management
@@ -82,6 +109,8 @@ It not only detects whether an email is **Spam** or **Not Spam** with high accur
 ```
 templates/
  └── index.html         # Web UI (dark/light mode, results, response)
+ assets/
+ └── charizard.png      # Logo
 app.py                  # Flask app (loads model, serves predictions)
 spam_classifier.py      # ML training pipeline (preprocessing + training + saving models)
 spam_dataset.csv        # Original SMS spam/ham dataset (sample)
@@ -148,6 +177,10 @@ Edit `config.env`:
 # API Keys
 GOOGLE_API_KEY=your_google_api_key_here
 
+# Spam Detection Configuration
+SPAM_THRESHOLD=0.35     # Classification threshold (0.0-1.0, lower = stricter)
+RULES_STRICT=true       # Enable enhanced rule-based detection
+
 # Flask Config
 SECRET_KEY=your_secret_key_here
 FLASK_DEBUG=False
@@ -170,7 +203,15 @@ http://127.0.0.1:5000/
 ```
 
 Paste an email message into the text area → see whether it’s **Spam** or **Not Spam**.  
-If **Not Spam**, the app will also suggest an **AI-generated email reply**.
+If **Not Spam**, the app can also suggest an **AI-generated email reply**.
+
+### Enhanced Spam Detection & AI Responses
+- **Smart Toggle**: Use the toggle switch "Generate AI reply when not spam" to enable/disable AI responses
+- **Intelligent Classification**: Enhanced phishing detection with obfuscated URL recognition
+- **Configurable Sensitivity**: Adjust `SPAM_THRESHOLD` in config.env (lower = stricter detection)
+- **Rule-Based Overrides**: Strong spam indicators override ML predictions for better accuracy
+- The AI response setting defaults to ON for parity with previous behavior
+- If no `GOOGLE_API_KEY` is configured, AI reply generation will be skipped and a notice will be shown
 
 ---
 
@@ -316,6 +357,10 @@ SECRET_KEY=your_secure_secret_key
 FLASK_DEBUG=False
 PORT=8000
 WORKERS=4
+
+# Spam Detection Tuning
+SPAM_THRESHOLD=0.35    # Lower = stricter detection (0.0-1.0)
+RULES_STRICT=true      # Enable enhanced rule-based overrides
 ```
 
 ### **Performance Optimization**
@@ -461,12 +506,38 @@ spam-classifier/
 ├── tfidf_vectorizer.pkl   # Feature extractor
 ├── templates/
 │   └── index.html         # Web interface
+├── assets/
+│   └── charizard.png      # Brand Logo
 └── .gitignore            # Git ignore rules
 ```
 
 ---
 
-## 📜 License
+## � Future Developments
+
+### **Planned Enhancements**
+- **🔧 Browser Extension**: Transform Spamizard into a Chrome/Firefox extension for real-time email analysis directly within Gmail, Outlook, and other webmail clients
+  - Client-side ML model integration for offline processing
+  - Seamless integration with popular email providers
+  - One-click spam detection without leaving your inbox
+- **📱 Mobile App**: Native iOS/Android applications with push notifications
+- **🤖 Advanced AI Models**: Integration with transformer-based models (BERT, RoBERTa) for improved accuracy
+- **📊 Analytics Dashboard**: User analytics with spam trends and detection statistics
+- **🔗 API Integration**: RESTful API for third-party integrations and enterprise use
+- **🌐 Multi-language Support**: Spam detection for emails in multiple languages
+- **⚡ Real-time Processing**: WebSocket integration for instant classification
+- **🛡️ Advanced Security**: Enhanced encryption and privacy protection features
+- **📈 Learning Capabilities**: Adaptive model that learns from user feedback
+
+### **Technical Roadmap**
+- **Phase 1**: Browser extension development and Chrome Web Store publication
+- **Phase 2**: Mobile app development with cross-platform framework
+- **Phase 3**: Enterprise API and advanced ML model integration
+- **Phase 4**: Multi-language support and global deployment
+
+---
+
+## �📜 License
 MIT License – You are free to use, modify, and distribute this project for educational and commercial purposes.
 
 ---

@@ -19,10 +19,3 @@ config.env
 # OS junk
 .DS_Store
 
-# Model artifacts
-*.pkl
-
-# Large datasets (keep small sample dataset only)
-*.csv
-!spam_dataset.csv
-
