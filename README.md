@@ -5,7 +5,7 @@
 ![Flask](https://img.shields.io/badge/flask-2.x-000000?logo=flask)
 ![License](https://img.shields.io/badge/license-MIT-0ea5e9)
 
-Spamizard is a **production-ready AI email classifier** with a modern web interface, built using **Machine Learning (scikit-learn)** and **Flask**.  
+Spamizard is an **AI email classifier** with a modern web interface, built using **Machine Learning (scikit-learn)** and **Flask**.  
 It detects whether an email is **Spam** or **Not Spam** (phishing is mapped to spam) with high accuracy, and can use **Google Gemini API** to generate professional replies for safe emails.
 
 ---
